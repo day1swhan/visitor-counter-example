@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "target": "es2021",
+    "module": "es2022",
+    "strict": true,
+    "lib": ["es2021"],
+    "jsx": "react-jsx",
+    "moduleResolution": "Bundler",
+    "resolveJsonModule": true,
+    "allowJs": true,
+    "checkJs": false,
+    "noEmit": true,
+    "isolatedModules": true,
+    "allowSyntheticDefaultImports": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    "types": ["./worker-configuration.d.ts"]
+  },
+  "exclude": ["./node_modules"],
+  "include": ["worker-configuration.d.ts", "src/**/*.ts"]
+}
