@@ -1,12 +1,17 @@
 # visitor-counter-example
 
+![Cover image for visitor-counter-example](./public/cover.webp)
+
 ## 개요
 
 Cloudflare Workers를 이용해서 간단한 방문자 카운팅 API를 만드는 방법을 설명합니다.
 
-자세한 내용은 [Cloudflare Workers로 서버리스 방문자 카운팅 API 만들기](https://blog.day1swhan.com/posts/cloudflare-workers-01) 포스팅을 참조하시기 바랍니다.
+자세한 내용은 아래 포스팅들을 참조하시기 바랍니다.
 
-Workers에 대한 더 많은 정보는 [공식 문서](https://developers.cloudflare.com/workers/)를 참조하시기 바랍니다.
+- [Cloudflare Workers로 서버리스 방문자 카운팅 API 만들기 (1/2)](https://blog.day1swhan.com/posts/cloudflare-workers-01)
+- [Cloudflare Workers로 서버리스 방문자 카운팅 API 만들기 (2/2)](https://blog.day1swhan.com/posts/cloudflare-workers-02)
+
+Workers에 대한 더 많은 정보는 [공식 문서](https://developers.cloudflare.com/workers/)에서 확인하실 수 있습니다.
 
 ## 설치
 
@@ -23,19 +28,50 @@ npm run dev
 
 Your Worker has access to the following bindings:
 Binding                                                      Resource          Mode
-env.VISITOR_COUNT_DB (1234567890abcdef1234567890abcdef)      KV Namespace      local
+env.VISITOR_COUNT_DB (1234567890abcdef)      KV Namespace      local
 
 ⎔ Starting local server...
 [wrangler:info] Ready on http://localhost:8787
 ```
 
+### 카운팅 정보 업데이트
+
 ```sh
-curl 'http://localhost:8787/view?id=my-first-post'
+curl -X POST \
+-H 'Origin: http://localhost:3000' \
+-H 'Content-type: application/json' \
+-d '{"postId":"my-first-post"}' \
+'http://localhost:8787/count'
+```
+
+```sh
+HTTP/1.1 200 OK
+
+...
+Content-Length: 11
+Content-Type: application/json
+Access-Control-Allow-Origin: http://localhost:3000
+Vary: Origin
+Access-Control-Allow-Credentials: true
+Access-Control-Allow-Headers: Content-Type
+Access-Control-Allow-Methods: GET, POST, OPTIONS
+Access-Control-Max-Age: 60
+Set-Cookie: sid=xxxxxxxx; Domain=localhost; Path=/; HttpOnly; Max-Age=86400; SameSite=Strict;
+
+{"ok":true}
+```
+
+### 카운팅 정보 가져오기
+
+```sh
+curl \
+-H 'Origin: http://localhost:3000' \
+'http://localhost:8787/view?id=my-first-post'
 
 {
   "postId": "my-first-post",
   "count": 1,
-  "lastUpdate": "2025-07-14T09:10:36Z"
+  "lastUpdate": "2025-07-21T09:10:00Z"
 }
 ```
 
@@ -49,12 +85,13 @@ wrangler를 이용한 cli 환경에서 배포하기 위해서는 API 토큰 발�
 
 계정 단위에서 편집 권한을
 
-- Workers KV 저장 공간
-- Workers 스크립트
+- **Workers KV 저장 공간**
+- **Workers 스크립트**
 
 이렇게 두개 넣어주시면 됩니다.
 
 ```sh
+# wrangler에서 사용할 환경변수 등록
 export CLOUDFLARE_API_TOKEN="xxxxxxxxxx"
 ```
 
@@ -86,7 +123,7 @@ Add the following to your configuration file in your kv_namespaces array:
 
 ### KV Namespace 적용
 
-workers가 배포 후 kv 저장소에 접근할 수 `wrangler.jsonc` 파일에 방금 생성된 kv_namespace `id` 값을 반영해 줍니다.
+배포된 worker가 KV 저장소에 접근할 수 `wrangler.jsonc` 파일에 방금 생성된 kv_namespace `id` 값을 반영해 줍니다.
 
 ```json
 // wrangler.jsonc
@@ -97,7 +134,25 @@ workers가 배포 후 kv 저장소에 접근할 수 `wrangler.jsonc` 파일에 �
     {
       "binding": "VISITOR_COUNT_DB",
       "id": "987654321abcdefg", // 프로덕션용, 배포시 포함되어야됨
-      "preview_id": "1234567890abcdef1234567890abcdef" // 이건 로컬용, 아무 의미 없음
+      "preview_id": "1234567890abcdef" // 이건 로컬용, 아무 의미 없음
+    }
+  ]
+}
+```
+
+### Custom Domains 적용
+
+worker가 개인 소유 도메인과 연결될 수 있도록 `wrangler.jsonc` 파일에 `routes` 옵션 추가해 줍니다.
+
+```json
+// wrangler.jsonc
+{
+  "name": "visitor-counter-example",
+  ...
+  "routes": [
+    {
+      "pattern": "visitor.my-domain.com",
+      "custom_domain": true
     }
   ]
 }
@@ -112,26 +167,56 @@ npm run deploy
 ```
 
 ```sh
-npm run deploy
-
 Total Upload: 2.93 KiB / gzip: 1.09 KiB
 Your Worker has access to the following bindings:
 Binding                            Resource
-env.VISITOR_COUNT_DB (xxxxxx)      KV Namespace
+env.VISITOR_COUNT_DB (987654321abcdefg)      KV Namespace
 
 ...
 
 Deployed visitor-counter-example triggers (0.41 sec)
-  https://visitor-counter-example.MY-DOMAIN.workers.dev
+  https://visitor.my-domain.com
+```
+
+### 카운팅 정보 업데이트
+
+```sh
+curl -X POST \
+-H 'Origin: http://localhost:3000' \
+-H 'Content-type: application/json' \
+-d '{"postId":"my-first-post"}' \
+'https://visitor.my-domain.com/count'
 ```
 
 ```sh
-curl 'https://visitor-counter-example.MY-DOMAIN.workers.dev/view?id=my-first-post'
+HTTP/2 200
+
+...
+server: cloudflare
+content-type: application/json
+content-length: 11
+access-control-allow-origin: http://localhost:3000
+access-control-allow-credentials: true
+access-control-allow-headers: Content-Type
+access-control-allow-methods: GET, POST, OPTIONS
+access-control-max-age: 60
+vary: Origin
+set-cookie: sid=xxxxxxxx; Domain=visitor.my-domain.com; Path=/; HttpOnly; Max-Age=86400; SameSite=Strict;
+
+{"ok":true}
+```
+
+### 카운팅 정보 가져오기
+
+```sh
+curl \
+-H 'Origin: http://localhost:3000' \
+'https://visitor.my-domain.com/view?id=my-first-post'
 
 {
   "postId": "my-first-post",
   "count": 1,
-  "lastUpdate": "2025-07-14T09:20:36Z"
+  "lastUpdate": "2025-07-21T09:20:00Z"
 }
 ```
 

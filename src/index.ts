@@ -1,39 +1,77 @@
-import { middlewareResolveRequest } from "./middleware/middleware-resolve-request";
+import { resolveRequest, parseCookie, verifyOrigin, generateCorsHeaders } from "./utils";
+import { getPageView, getSessionId, putPageView, putSessionId, PageViewEvent } from "./commands";
 import { notFound, badRequest } from "./api/response";
 
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
-    const { method, path, query } = await middlewareResolveRequest(request);
+    const { method, hostname, path, query, headers, body, isJson } = await resolveRequest(request);
     const routeKey = method + " " + path;
+    const cookie = parseCookie(headers["cookie"] || "");
+    const origin = headers["origin"] || "";
+
+    if (!verifyOrigin(origin)) {
+      return badRequest("Not Allowd Origin");
+    }
 
     switch (routeKey) {
-      case "GET /": {
-        return new Response("Hello visitor-counter-example!");
+      case "OPTIONS /count": {
+        return new Response(null, {
+          status: 204,
+          headers: generateCorsHeaders(origin),
+        });
+      }
+
+      case "POST /count": {
+        if (!isJson || !body) {
+          return badRequest("Invalid Request");
+        }
+
+        const { postId } = JSON.parse(body);
+
+        if (!postId) {
+          return badRequest("Invalid Request Payload");
+        }
+
+        const headers: Record<string, string> = generateCorsHeaders(origin);
+        const content = { ok: true };
+
+        const sessionId = cookie["sid"] || crypto.randomUUID().replace(/\-/g, "");
+        const { isValid } = await getSessionId({ sessionId: sessionId }, env);
+
+        if (!isValid) {
+          const { count } = await getPageView({ postId: postId }, env);
+
+          await putPageView({ postId: postId, count: Number(count || 0) + 1 }, env);
+          await putSessionId({ sessionId, expirationTtl: 86400 }, env);
+
+          headers[
+            "Set-Cookie"
+          ] = `sid=${sessionId}; Domain=${hostname}; Path=/; HttpOnly; Max-Age=86400; SameSite=Strict;`;
+        }
+
+        return Response.json(content, {
+          status: 200,
+          headers: headers,
+        });
       }
 
       case "GET /view": {
         const postId = query["id"];
 
         if (!postId) {
-          return badRequest();
+          return badRequest("Invalid Request Payload");
         }
 
-        // view 이벤트에 사용할 key
-        const key = `view:${postId}`;
+        const output = await getPageView({ postId: postId }, env);
 
-        // 기존 카운팅 정보 가져오기
-        const before = await env.VISITOR_COUNT_DB.get(key);
+        const headers: Record<string, string> = generateCorsHeaders(origin);
+        const content: Partial<PageViewEvent> = {
+          postId: output.postId,
+          count: output.count,
+          lastUpdate: output.lastUpdate,
+        };
 
-        // 요청 들어왔으니 +1 해주고
-        const count = Number(before || 0) + 1;
-
-        // 언제 업데이트 된건지 응답 정보에 넘겨주기 (선택)
-        const lastUpdate = new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
-
-        // 최신 카운팅 정보로 덮어쓰기
-        await env.VISITOR_COUNT_DB.put(key, String(count));
-
-        return Response.json({ postId, count, lastUpdate });
+        return Response.json(content, { status: 200, headers: headers });
       }
 
       default: {

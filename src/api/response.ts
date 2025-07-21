@@ -1,6 +1,6 @@
-export const badRequest = () => {
+export const badRequest = (msg?: string) => {
   const code = 400;
-  const message = "Bad Request";
+  const message = msg ? msg : "Bad Request";
   return Response.json({ err: { code, message } }, { status: code });
 };
 
@@ -12,6 +12,6 @@ export const forbidden = () => {
 
 export const notFound = () => {
   const code = 404;
-  const message = "NotFound";
+  const message = "Not Found";
   return Response.json({ err: { code, message } }, { status: code });
 };

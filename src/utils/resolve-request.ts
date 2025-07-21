@@ -1,24 +1,16 @@
-export interface ResolvedRequest {
-  method: string;
-  hostname: string;
-  path: string;
-  query: { [x: string]: string | undefined };
-  headers: { [x: string]: string };
-  body?: string;
-  isJson: boolean; // custom
-}
+import { HttpRequest } from "./types";
 
-export const middlewareResolveRequest = async (request: Request): Promise<ResolvedRequest> => {
+export const resolveRequest = async (request: Request): Promise<HttpRequest> => {
   const { method, headers, url } = request;
   const { hostname, pathname, searchParams } = new URL(url);
 
-  const resolvedHeaders: ResolvedRequest["headers"] = {};
+  const resolvedHeaders: HttpRequest["headers"] = {};
   for (const entry of headers.entries()) {
     const [key, value] = entry;
     resolvedHeaders[key.toLowerCase()] = value;
   }
 
-  const resolvedQuery: ResolvedRequest["query"] = {};
+  const resolvedQuery: HttpRequest["query"] = {};
   for (const entry of searchParams.entries()) {
     const [key, value] = entry;
     resolvedQuery[key] = value;
@@ -26,11 +18,13 @@ export const middlewareResolveRequest = async (request: Request): Promise<Resolv
 
   let body = "";
   let isJson = false;
+
   if (method == "POST") {
     const contentType = resolvedHeaders["content-type"] || "";
     if (contentType.includes("application/json")) {
       try {
-        body = JSON.stringify(await request.json());
+        const payload = await request.json();
+        body = JSON.stringify(payload);
       } catch (e) {
         body = JSON.stringify({});
       } finally {

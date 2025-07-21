@@ -12,5 +12,11 @@
       "id": "xxxxxxxxxx", // 프로덕션용, 배포시 포함되어야됨
       "preview_id": "1234567890abcdef1234567890abcdef" // 이건 로컬용, 아무 의미 없음
     }
+  ],
+  "routes": [
+    {
+      "pattern": "visitor.my-domain.com",
+      "custom_domain": true
+    }
   ]
 }
