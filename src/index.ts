@@ -35,18 +35,16 @@ export default {
         const headers: Record<string, string> = generateCorsHeaders(origin);
         const content = { ok: true };
 
-        const sessionId = cookie["sid"] || crypto.randomUUID().replace(/\-/g, "");
-        const { isValid } = await getSessionId({ sessionId: sessionId }, env);
+        const sid = cookie["sid"] || crypto.randomUUID().replace(/\-/g, "");
+        const { sessionId } = await getSessionId({ sessionId: sid, postId }, env);
 
-        if (!isValid) {
-          const { count } = await getPageView({ postId: postId }, env);
+        if (!sessionId) {
+          const { count } = await getPageView({ postId }, env);
 
-          await putPageView({ postId: postId, count: Number(count || 0) + 1 }, env);
-          await putSessionId({ sessionId, expirationTtl: 86400 }, env);
+          await putPageView({ postId, count: Number(count || 0) + 1 }, env);
+          await putSessionId({ sessionId: sid, postId, expirationTtl: 86400 }, env);
 
-          headers[
-            "Set-Cookie"
-          ] = `sid=${sessionId}; Domain=${hostname}; Path=/; HttpOnly; Max-Age=86400; SameSite=Strict;`;
+          headers["Set-Cookie"] = `sid=${sid}; Domain=${hostname}; Path=/; HttpOnly; Max-Age=86400; SameSite=Strict;`;
         }
 
         return Response.json(content, {

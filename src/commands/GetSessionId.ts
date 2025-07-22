@@ -3,17 +3,19 @@ import { deserializeMetadata, verifySessionId } from "./constants";
 
 export interface GetSessionIdInput {
   sessionId: string;
-  ttl?: number;
+  postId: string;
+  cacheTtl?: number;
 }
 
-export interface GetSessionIdOutput extends MetadataBearer, Partial<SessionIdEvent> {
-  isValid?: boolean;
-}
+export interface GetSessionIdOutput extends MetadataBearer, Partial<SessionIdEvent> {}
 
 export const getSessionId = async (input: GetSessionIdInput, env: Env): Promise<GetSessionIdOutput> => {
-  const { value, metadata, cacheStatus } = await env.VISITOR_COUNT_DB.getWithMetadata(input.sessionId, {
+  const { sessionId, postId, cacheTtl } = input;
+
+  const key = `visit:${sessionId}:${postId}`;
+  const { value, metadata, cacheStatus } = await env.VISITOR_COUNT_DB.getWithMetadata(key, {
     type: "text",
-    ...(input.ttl && { cacheTtl: input.ttl }),
+    ...(cacheTtl && { cacheTtl }),
   });
 
   const data = JSON.parse(value || "{}");
@@ -26,6 +28,6 @@ export const getSessionId = async (input: GetSessionIdInput, env: Env): Promise<
       ...(cacheStatus && { cacheStatus }),
     },
     sessionId: content.sessionId || undefined,
-    isValid: content.sessionId ? true : false,
+    postId: content.postId || undefined,
   };
 };

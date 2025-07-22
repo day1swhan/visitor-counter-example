@@ -16,4 +16,5 @@ export type PageViewEvent = {
 
 export type SessionIdEvent = {
   sessionId: string;
+  postId: string;
 };

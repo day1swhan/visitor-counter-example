@@ -28,5 +28,11 @@ export const verifyPageViewEvent = (input: any): input is PageViewEvent => {
 };
 
 export const verifySessionId = (input: any): input is SessionIdEvent => {
-  return typeof input == "object" && "sessionId" in input && typeof (input as any).sessionId === "string";
+  return (
+    typeof input == "object" &&
+    "sessionId" in input &&
+    "postId" in input &&
+    typeof (input as any).sessionId === "string" &&
+    typeof (input as any).postId === "string"
+  );
 };
