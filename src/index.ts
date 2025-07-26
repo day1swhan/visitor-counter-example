@@ -33,18 +33,27 @@ export default {
         }
 
         const headers: Record<string, string> = generateCorsHeaders(origin);
-        const content = { ok: true };
+        const content = { ok: false };
 
+        const ttl = 86400;
         const sid = cookie["sid"] || crypto.randomUUID().replace(/\-/g, "");
         const { sessionId } = await getSessionId({ sessionId: sid, postId }, env);
 
         if (!sessionId) {
           const { count } = await getPageView({ postId }, env);
 
-          await putPageView({ postId, count: Number(count || 0) + 1 }, env);
-          await putSessionId({ sessionId: sid, postId, expirationTtl: 86400 }, env);
+          try {
+            await Promise.all([
+              putSessionId({ sessionId: sid, postId, expirationTtl: ttl }, env),
+              putPageView({ postId, count: Number(count || 0) + 1 }, env),
+            ]);
 
-          headers["Set-Cookie"] = `sid=${sid}; Domain=${hostname}; Path=/; HttpOnly; Max-Age=86400; SameSite=Strict;`;
+            content.ok = true;
+          } catch (e) {
+            console.log("Update PageView error!");
+          }
+
+          headers["Set-Cookie"] = `sid=${sid}; Domain=${hostname}; Path=/; HttpOnly; Max-Age=${ttl}; SameSite=Strict;`;
         }
 
         return Response.json(content, {
