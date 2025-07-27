@@ -10,7 +10,7 @@
     {
       "binding": "VISITOR_COUNT_DB",
       "id": "xxxxxxxxxx", // 프로덕션용, 배포시 포함되어야됨
-      "preview_id": "1234567890abcdef1234567890abcdef" // 이건 로컬용, 아무 의미 없음
+      "preview_id": "1234567890abcdef" // 이건 로컬용, 아무 의미 없음
     }
   ],
   "routes": [

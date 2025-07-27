@@ -8,8 +8,8 @@ Cloudflare Workers를 이용해서 간단한 방문자 카운팅 API를 만드�
 
 자세한 내용은 아래 포스팅들을 참조하시기 바랍니다.
 
-- [Cloudflare Workers로 서버리스 방문자 카운팅 API 만들기 (1/2)](https://blog.day1swhan.com/posts/cloudflare-workers-01)
-- [Cloudflare Workers로 서버리스 방문자 카운팅 API 만들기 (2/2)](https://blog.day1swhan.com/posts/cloudflare-workers-02)
+- [Cloudflare Workers & KV 이용해서 서버리스 방문자 카운팅 API 만들기 (1/2)](https://blog.day1swhan.com/posts/cloudflare-workers-01)
+- [Cloudflare Workers & KV 이용해서 서버리스 방문자 카운팅 API 만들기 (2/2)](https://blog.day1swhan.com/posts/cloudflare-workers-02)
 
 Workers에 대한 더 많은 정보는 [공식 문서](https://developers.cloudflare.com/workers/)에서 확인하실 수 있습니다.
 
@@ -18,7 +18,8 @@ Workers에 대한 더 많은 정보는 [공식 문서](https://developers.cloudf
 ```sh
 git clone https://github.com/day1swhan/visitor-counter-example.git
 
-cd visitor-counter-example && npm install && npm run types
+cd visitor-counter-example && \
+npm install && npm run types
 ```
 
 ## 개발 모드
@@ -27,7 +28,7 @@ cd visitor-counter-example && npm install && npm run types
 npm run dev
 
 Your Worker has access to the following bindings:
-Binding                                                      Resource          Mode
+Binding                                      Resource          Mode
 env.VISITOR_COUNT_DB (1234567890abcdef)      KV Namespace      local
 
 ⎔ Starting local server...
@@ -48,14 +49,13 @@ curl -X POST \
 HTTP/1.1 200 OK
 
 ...
-Content-Length: 11
 Content-Type: application/json
 Access-Control-Allow-Origin: http://localhost:3000
-Vary: Origin
 Access-Control-Allow-Credentials: true
 Access-Control-Allow-Headers: Content-Type
 Access-Control-Allow-Methods: GET, POST, OPTIONS
 Access-Control-Max-Age: 60
+Vary: Origin
 Set-Cookie: sid=xxxxxxxx; Domain=localhost; Path=/; HttpOnly; Max-Age=86400; SameSite=Strict;
 
 {"ok":true}
@@ -83,12 +83,16 @@ wrangler를 이용한 cli 환경에서 배포하기 위해서는 API 토큰 발�
 
 [Dashboard](https://dash.cloudflare.com/)에서 계정 관리 - 계정 API 토큰 - 사용자 설정 토큰 생성
 
-계정 단위에서 편집 권한을
+**계정 단위**에서 편집 권한
 
 - **Workers KV 저장 공간**
 - **Workers 스크립트**
 
-이렇게 두개 넣어주시면 됩니다.
+**영역 단위**에서 편집 권한 (커스텀 도메인 사용시)
+
+- **Workers 경로**
+
+이렇게 넣어주시면 됩니다.
 
 ```sh
 # wrangler에서 사용할 환경변수 등록
@@ -192,9 +196,7 @@ curl -X POST \
 HTTP/2 200
 
 ...
-server: cloudflare
 content-type: application/json
-content-length: 11
 access-control-allow-origin: http://localhost:3000
 access-control-allow-credentials: true
 access-control-allow-headers: Content-Type
